@@ -5,29 +5,68 @@ import heroImg from './assets/hero.png'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [todos, setTodos] = useState([
+    { id: 1, text: 'Learn React', completed: false },
+    { id: 2, text: 'Build a Todo List', completed: true }
+  ])
+  const [inputValue, setInputValue] = useState('')
+
+  const addTodo = (e) => {
+    e.preventDefault()
+    if (!inputValue.trim()) return
+    const newTodo = {
+      id: Date.now(),
+      text: inputValue,
+      completed: false
+    }
+    setTodos([...todos, newTodo])
+    setInputValue('')
+  }
+
+  const toggleTodo = (id) => {
+    setTodos(todos.map(todo => 
+      todo.id === id ? { ...todo, completed: !todo.completed } : todo
+    ))
+  }
+
+  const deleteTodo = (id) => {
+    setTodos(todos.filter(todo => todo.id !== id))
+  }
 
   return (
     <>
       <section id="center">
+        <br>신상민~~~</br>
         <div className="hero">
           <img src={heroImg} className="base" width="170" height="179" alt="" />
           <img src={reactLogo} className="framework" alt="React logo" />
           <img src={viteLogo} className="vite" alt="Vite logo" />
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
+        <div className="todo-container">
+          <h1>Todo List</h1>
+          <form onSubmit={addTodo} className="todo-form">
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder="What needs to be done?"
+              className="todo-input"
+            />
+            <button type="submit" className="todo-add-btn">Add</button>
+          </form>
+          <ul className="todo-list">
+            {todos.map(todo => (
+              <li key={todo.id} className={`todo-item ${todo.completed ? 'completed' : ''}`}>
+                <span onClick={() => toggleTodo(todo.id)} className="todo-text">
+                  {todo.text}
+                </span>
+                <button onClick={() => deleteTodo(todo.id)} className="todo-delete-btn">
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
       </section>
 
       <div className="ticks"></div>

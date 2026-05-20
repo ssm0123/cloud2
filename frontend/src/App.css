@@ -56,6 +56,87 @@
   }
 }
 
+.todo-container {
+  width: 100%;
+  max-width: 400px;
+  text-align: left;
+}
+
+.todo-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.todo-input {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--social-bg);
+  color: var(--text-h);
+}
+
+.todo-add-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.3s;
+}
+
+.todo-add-btn:hover {
+  opacity: 0.9;
+}
+
+.todo-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.todo-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--social-bg);
+  border-radius: 6px;
+  transition: box-shadow 0.3s;
+}
+
+.todo-item:hover {
+  box-shadow: var(--shadow);
+}
+
+.todo-item.completed .todo-text {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.todo-text {
+  cursor: pointer;
+  flex: 1;
+}
+
+.todo-delete-btn {
+  background: none;
+  border: none;
+  color: #ff4444;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0 5px;
+  line-height: 1;
+}
+
+.todo-delete-btn:hover {
+  color: #ff0000;
+}
+
 #center {
   display: flex;
   flex-direction: column;
