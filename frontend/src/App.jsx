@@ -1,193 +1,201 @@
-import { useState, useEffect } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState, useEffect } from 'react';
+import { postApi } from './api/postApi';
+import './App.css';
 
-const API_URL = 'http://localhost:8080/api/todos'
+// --- Sub-components (Defined outside to prevent focus loss) ---
+
+const ListView = ({ posts, handlePostClick, handleCreateClick }) => (
+  <div className="board-container">
+    <h2>게시판 목록</h2>
+    <button className="btn-primary" onClick={handleCreateClick}>글쓰기</button>
+    <table className="post-table">
+      <thead>
+        <tr>
+          <th>번호</th>
+          <th>제목</th>
+          <th>작성자</th>
+          <th>작성일</th>
+        </tr>
+      </thead>
+      <tbody>
+        {posts.map(post => (
+          <tr key={post.id} onClick={() => handlePostClick(post.id)} className="clickable-row">
+            <td>{post.id}</td>
+            <td>{post.title}</td>
+            <td>{post.author}</td>
+            <td>{new Date(post.createdAt).toLocaleDateString()}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+);
+
+const DetailView = ({ currentPost, setView, handleEditClick, handleDelete }) => (
+  <div className="board-container detail-view">
+    <h2>{currentPost?.title}</h2>
+    <div className="post-meta">
+      <span>작성자: {currentPost?.author}</span> | 
+      <span> 작성일: {new Date(currentPost?.createdAt).toLocaleString()}</span>
+    </div>
+    <div className="post-content">
+      {currentPost?.content}
+    </div>
+    <div className="btn-group">
+      <button onClick={() => setView('list')}>목록으로</button>
+      <button onClick={() => handleEditClick(currentPost)}>수정</button>
+      <button className="btn-danger" onClick={() => handleDelete(currentPost.id)}>삭제</button>
+    </div>
+  </div>
+);
+
+const FormView = ({ currentPost, formData, handleChange, handleSubmit, setView }) => (
+  <div className="board-container">
+    <h2>{currentPost ? '게시글 수정' : '게시글 작성'}</h2>
+    <form onSubmit={handleSubmit} className="post-form">
+      <div className="form-group">
+        <label>제목</label>
+        <input 
+          name="title" 
+          value={formData.title} 
+          onChange={handleChange} 
+          required 
+          autoFocus={!currentPost}
+        />
+      </div>
+      <div className="form-group">
+        <label>작성자</label>
+        <input 
+          name="author" 
+          value={formData.author} 
+          onChange={handleChange} 
+          required 
+        />
+      </div>
+      <div className="form-group">
+        <label>내용</label>
+        <textarea 
+          name="content" 
+          value={formData.content} 
+          onChange={handleChange} 
+          rows="10" 
+          required 
+        />
+      </div>
+      <div className="btn-group">
+        <button type="submit" className="btn-primary">{currentPost ? '수정완료' : '등록'}</button>
+        <button type="button" onClick={() => setView('list')}>취소</button>
+      </div>
+    </form>
+  </div>
+);
 
 function App() {
-  const [todos, setTodos] = useState([])
-  const [inputValue, setInputValue] = useState('')
+  const [posts, setPosts] = useState([]);
+  const [view, setView] = useState('list'); // 'list', 'detail', 'form'
+  const [currentPost, setCurrentPost] = useState(null);
+  const [formData, setFormData] = useState({ title: '', content: '', author: '' });
 
+  // 초기 목록 로드
   useEffect(() => {
-    fetchTodos()
-  }, [])
+    fetchPosts();
+  }, []);
 
-  const fetchTodos = async () => {
+  const fetchPosts = async () => {
     try {
-      const response = await fetch(API_URL)
-      const data = await response.json()
-      setTodos(data)
+      const response = await postApi.getAllPosts();
+      setPosts(response.data);
     } catch (error) {
-      console.error('Error fetching todos:', error)
+      console.error('Error fetching posts:', error);
     }
-  }
+  };
 
-  const addTodo = async (e) => {
-    e.preventDefault()
-    if (!inputValue.trim()) return
-    const newTodo = { text: inputValue, completed: false }
+  const handleCreateClick = () => {
+    setFormData({ title: '', content: '', author: '' });
+    setCurrentPost(null);
+    setView('form');
+  };
+
+  const handleEditClick = (post) => {
+    setFormData({ title: post.title, content: post.content, author: post.author });
+    setCurrentPost(post);
+    setView('form');
+  };
+
+  const handlePostClick = async (id) => {
     try {
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newTodo)
-      })
-      if (response.ok) {
-        fetchTodos()
-        setInputValue('')
+      const response = await postApi.getPost(id);
+      setCurrentPost(response.data);
+      setView('detail');
+    } catch (error) {
+      console.error('Error fetching post detail:', error);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('정말 삭제하시겠습니까?')) return;
+    try {
+      await postApi.deletePost(id);
+      fetchPosts();
+      setView('list');
+    } catch (error) {
+      console.error('Error deleting post:', error);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (currentPost) {
+        await postApi.updatePost(currentPost.id, formData);
+      } else {
+        await postApi.createPost(formData);
       }
+      fetchPosts();
+      setView('list');
     } catch (error) {
-      console.error('Error adding todo:', error)
+      console.error('Error saving post:', error);
     }
-  }
+  };
 
-  const toggleTodo = async (todo) => {
-    try {
-      const response = await fetch(`${API_URL}/${todo.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...todo, completed: !todo.completed })
-      })
-      if (response.ok) fetchTodos()
-    } catch (error) {
-      console.error('Error toggling todo:', error)
-    }
-  }
-
-  const deleteTodo = async (id) => {
-    try {
-      const response = await fetch(`${API_URL}/${id}`, { method: 'DELETE' })
-      if (response.ok) fetchTodos()
-    } catch (error) {
-      console.error('Error deleting todo:', error)
-    }
-  }
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
 
   return (
-    <>
-      <section id="center">
-        <br>신상민~~~</br>
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div className="todo-container">
-          <h1>Todo List</h1>
-          <form onSubmit={addTodo} className="todo-form">
-            <input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="What needs to be done?"
-              className="todo-input"
-            />
-            <button type="submit" className="todo-add-btn">Add</button>
-          </form>
-          <ul className="todo-list">
-            {todos.map(todo => (
-              <li key={todo.id} className={`todo-item ${todo.completed ? 'completed' : ''}`}>
-                <span onClick={() => toggleTodo(todo)} className="todo-text">
-                  {todo.text}
-                </span>
-                <button onClick={() => deleteTodo(todo.id)} className="todo-delete-btn">
-                  ×
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+    <div className="App">
+      <header className="App-header">
+        <h1>React + Spring MVC Bulletin Board</h1>
+      </header>
+      <main>
+        {view === 'list' && (
+          <ListView 
+            posts={posts} 
+            handlePostClick={handlePostClick} 
+            handleCreateClick={handleCreateClick} 
+          />
+        )}
+        {view === 'detail' && (
+          <DetailView 
+            currentPost={currentPost} 
+            setView={setView} 
+            handleEditClick={handleEditClick} 
+            handleDelete={handleDelete} 
+          />
+        )}
+        {view === 'form' && (
+          <FormView 
+            currentPost={currentPost} 
+            formData={formData} 
+            handleChange={handleChange} 
+            handleSubmit={handleSubmit} 
+            setView={setView} 
+          />
+        )}
+      </main>
+    </div>
+  );
 }
 
-export default App
+export default App;
